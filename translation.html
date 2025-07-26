@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Translation</title>
+    <style>
+      :root {
+        font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
+        font-size: 16px;
+        line-height: 24px;
+        font-weight: 400;
+        color: #0f0f0f;
+        background-color: #f6f6f6;
+        font-synthesis: none;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        -webkit-text-size-adjust: 100%;
+      }
+
+      body {
+        margin: 0;
+        padding: 20px;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .container {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .section {
+        margin-bottom: 20px;
+      }
+
+      .section h3 {
+        margin: 0 0 10px 0;
+        color: #374151;
+        font-size: 1.1rem;
+        font-weight: 600;
+      }
+
+      .content {
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 15px;
+        font-size: 0.95rem;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        min-height: 60px;
+      }
+
+      .original-text {
+        color: #374151;
+      }
+
+      .translation-text {
+        color: #059669;
+        position: relative;
+      }
+
+      .typing-indicator {
+        display: inline-block;
+        width: 8px;
+        height: 20px;
+        background: #059669;
+        margin-left: 2px;
+        animation: blink 1s infinite;
+        vertical-align: text-bottom;
+      }
+
+      @keyframes blink {
+        0%, 50% { opacity: 1; }
+        51%, 100% { opacity: 0; }
+      }
+
+      .status {
+        padding: 10px 15px;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        text-align: center;
+        margin-bottom: 20px;
+      }
+
+      .status.translating {
+        background: #dbeafe;
+        color: #1e40af;
+        border: 1px solid #93c5fd;
+      }
+
+      .status.completed {
+        background: #d1fae5;
+        color: #065f46;
+        border: 1px solid #6ee7b7;
+      }
+
+      .status.error {
+        background: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #fca5a5;
+      }
+
+      .actions {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        margin-top: auto;
+        padding-top: 20px;
+        border-top: 1px solid #e5e7eb;
+      }
+
+      .btn {
+        padding: 8px 16px;
+        border-radius: 6px;
+        border: none;
+        font-size: 0.9rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .btn-primary {
+        background: #3b82f6;
+        color: white;
+      }
+
+      .btn-primary:hover {
+        background: #2563eb;
+      }
+
+      .btn-secondary {
+        background: #f3f4f6;
+        color: #374151;
+        border: 1px solid #d1d5db;
+      }
+
+      .btn-secondary:hover {
+        background: #e5e7eb;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          color: #f6f6f6;
+          background-color: #2f2f2f;
+        }
+
+        .container {
+          background: #1f2937;
+          color: #f9fafb;
+        }
+
+        .section h3 {
+          color: #f3f4f6;
+        }
+
+        .content {
+          background: #374151;
+          border-color: #4b5563;
+          color: #e5e7eb;
+        }
+
+        .translation-text {
+          color: #34d399;
+        }
+
+        .typing-indicator {
+          background: #34d399;
+        }
+
+        .actions {
+          border-top-color: #4b5563;
+        }
+
+        .btn-secondary {
+          background: #374151;
+          color: #f3f4f6;
+          border-color: #4b5563;
+        }
+
+        .btn-secondary:hover {
+          background: #4b5563;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="status translating" id="status">
+      🔄 Translating to German...
+    </div>
+
+    <div class="container">
+      <div class="section">
+        <h3>Original Text</h3>
+        <div class="content original-text" id="original-text">
+          Loading...
+        </div>
+      </div>
+
+      <div class="section">
+        <h3>Translation</h3>
+        <div class="content translation-text" id="translation-text">
+          <span class="typing-indicator"></span>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-secondary" id="copy-btn" disabled>
+          📋 Copy Translation
+        </button>
+        <button class="btn btn-primary" id="close-btn">
+          ✕ Close
+        </button>
+      </div>
+    </div>
+
+    <script type="module">
+      import { getCurrentWindow } from '@tauri-apps/api/window';
+
+      const currentWindow = getCurrentWindow();
+      const statusEl = document.getElementById('status');
+      const originalTextEl = document.getElementById('original-text');
+      const translationTextEl = document.getElementById('translation-text');
+      const copyBtn = document.getElementById('copy-btn');
+      const closeBtn = document.getElementById('close-btn');
+
+      let translationComplete = false;
+      let fullTranslation = '';
+
+      let originalText = '';
+
+      // Listen for clipboard text from backend
+      currentWindow.listen('clipboard-text', (event) => {
+        originalText = event.payload;
+        originalTextEl.textContent = originalText;
+        console.log('Received clipboard text:', originalText);
+      });
+
+      // Initialize (no need to read clipboard anymore)
+      function init() {
+        console.log('Translation window initialized');
+        // Text will be received via clipboard-text event
+        // Translation will be started automatically by backend
+      }
+
+      // Listen for translation chunks
+      currentWindow.listen('translation-chunk', (event) => {
+        const chunk = event.payload;
+        fullTranslation += chunk;
+        
+        // Remove typing indicator and add chunk
+        const typingIndicator = translationTextEl.querySelector('.typing-indicator');
+        if (typingIndicator) {
+          typingIndicator.remove();
+        }
+        
+        translationTextEl.textContent = fullTranslation;
+        
+        // Add typing indicator back
+        const newIndicator = document.createElement('span');
+        newIndicator.className = 'typing-indicator';
+        translationTextEl.appendChild(newIndicator);
+      });
+
+      // Listen for translation completion
+      currentWindow.listen('translation-complete', (event) => {
+        const finalTranslation = event.payload;
+        fullTranslation = finalTranslation;
+        
+        // Remove typing indicator
+        const typingIndicator = translationTextEl.querySelector('.typing-indicator');
+        if (typingIndicator) {
+          typingIndicator.remove();
+        }
+        
+        translationTextEl.textContent = fullTranslation;
+        
+        // Update status
+        statusEl.textContent = '✅ Translation completed!';
+        statusEl.className = 'status completed';
+        
+        // Enable copy button
+        copyBtn.disabled = false;
+        translationComplete = true;
+      });
+
+      function showError(message) {
+        statusEl.textContent = '❌ ' + message;
+        statusEl.className = 'status error';
+        translationTextEl.textContent = 'Translation failed';
+        
+        const typingIndicator = translationTextEl.querySelector('.typing-indicator');
+        if (typingIndicator) {
+          typingIndicator.remove();
+        }
+      }
+
+      // Copy to clipboard
+      copyBtn.addEventListener('click', async () => {
+        if (fullTranslation) {
+          try {
+            await navigator.clipboard.writeText(fullTranslation);
+            copyBtn.textContent = '✅ Copied!';
+            setTimeout(() => {
+              copyBtn.textContent = '📋 Copy Translation';
+            }, 2000);
+          } catch (error) {
+            console.error('Failed to copy:', error);
+          }
+        }
+      });
+
+      // Close window
+      closeBtn.addEventListener('click', () => {
+        currentWindow.close();
+      });
+
+      // Start the process
+      init();
+    </script>
+  </body>
+</html>
