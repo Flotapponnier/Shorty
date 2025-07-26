@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use tauri::Emitter;
+use std::env;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TranslationRequest {
@@ -107,8 +108,9 @@ async fn show_translation_window(app_handle: tauri::AppHandle, text: String, tar
     // Wait a moment for the window to load, then send the text
     tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
     
-    // Send the clipboard text to the window
+    // Send the clipboard text and target language to the window
     let _ = window.emit("clipboard-text", &text);
+    let _ = window.emit("target-language", &target_language);
     
     // Start the translation with the WebviewWindow
     let _ = stream_translate_webview(TranslationRequest {
@@ -123,8 +125,9 @@ async fn show_translation_window(app_handle: tauri::AppHandle, text: String, tar
 async fn stream_translate_webview(request: TranslationRequest, window: tauri::WebviewWindow) -> Result<(), String> {
     use tokio_stream::StreamExt;
     
-    // TODO: Replace with your actual OpenAI API key
-    let api_key = "sk-proj-your-actual-openai-api-key-here";
+    // Read API key from environment variable
+    let api_key = env::var("OPENAI_API_KEY")
+        .map_err(|_| "OPENAI_API_KEY environment variable not found. Please check your .env file.".to_string())?;
     
     let client = reqwest::Client::new();
     
@@ -202,6 +205,15 @@ async fn stream_translate(_request: TranslationRequest, _window: tauri::Window) 
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Load environment variables from .env file
+    dotenvy::dotenv().ok();
+    
+    // Log whether API key is loaded
+    match env::var("OPENAI_API_KEY") {
+        Ok(_) => println!("✅ OpenAI API key loaded from environment"),
+        Err(_) => println!("❌ OpenAI API key not found. Please check your .env file."),
+    }
+    
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())

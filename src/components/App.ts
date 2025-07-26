@@ -130,6 +130,7 @@ export class App {
     this.featureSections.push(featureSection);
   }
 
+
   public destroy(): void {
     this.featureSections.forEach(section => section.destroy());
     this.featureSections = [];

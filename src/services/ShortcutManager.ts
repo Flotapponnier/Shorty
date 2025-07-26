@@ -11,6 +11,10 @@ export class ShortcutManager {
     this.agentManager = agentManager;
   }
 
+  private getSelectedLanguage(): string {
+    return localStorage.getItem('selected-language') || 'German';
+  }
+
   public async registerAgentShortcuts(): Promise<void> {
     const agents = this.agentManager.getAllAgents();
     
@@ -70,10 +74,13 @@ export class ShortcutManager {
       // For translation shortcut, open the translation window
       if (shortcut === 'cmd+t') {
         try {
+          const selectedLanguage = this.getSelectedLanguage();
+          console.log(`🌍 Using selected language for translation: ${selectedLanguage}`);
+          
           // Open translation window (the window will handle the translation)
           await invoke('show_translation_window', {
             text: clipboardText,
-            targetLanguage: 'German'
+            targetLanguage: selectedLanguage
           });
         } catch (error) {
           console.error('Failed to open translation window:', error);

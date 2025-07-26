@@ -80,20 +80,22 @@ bun install
 bun run tauri dev
 ```
 
-### 2. Get Free Groq API Key
+### 2. Get OpenAI API Key
 
-1. Visit [Groq Console](https://console.groq.com/)
-2. Sign up for a free account
+1. Visit [OpenAI Platform](https://platform.openai.com/api-keys)
+2. Sign up for an account
 3. Go to API Keys section
 4. Create a new API key
-5. Copy the key (starts with `gsk_...`)
+5. Copy the key (starts with `sk-proj-...`)
 
 ### 3. Configure API Key
 
-1. Launch the app: `bun run tauri dev`
-2. Paste your Groq API key in the input field
-3. Click "Save" to store it securely
-4. The translator agent will now be active
+1. Copy the environment file: `cp .env.example .env`
+2. Edit `.env` and replace with your actual API key:
+   ```bash
+   OPENAI_API_KEY=sk-proj-your-actual-api-key-here
+   ```
+3. The API key will be loaded automatically on startup
 
 ### 4. Test Translation
 
@@ -113,9 +115,9 @@ bun run tauri dev
 ## 🔑 Configuration Options
 
 ### API Settings
-- **API Key**: Stored securely in browser localStorage
-- **Target Language**: Configurable (default: English)
-- **Model**: Uses Groq's free LLaMA 3-8B model
+- **API Key**: Loaded from `.env` file for security
+- **Target Language**: Configurable (default: German)
+- **Model**: Uses OpenAI's GPT-4o-mini model
 
 ### Shortcut Customization
 Currently using fixed shortcuts:

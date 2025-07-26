@@ -197,7 +197,7 @@
   </head>
   <body>
     <div class="status translating" id="status">
-      🔄 Translating to German...
+      🔄 Translating...
     </div>
 
     <div class="container">
@@ -239,12 +239,20 @@
       let fullTranslation = '';
 
       let originalText = '';
+      let targetLanguage = 'German';
 
       // Listen for clipboard text from backend
       currentWindow.listen('clipboard-text', (event) => {
         originalText = event.payload;
         originalTextEl.textContent = originalText;
         console.log('Received clipboard text:', originalText);
+      });
+
+      // Listen for target language from backend
+      currentWindow.listen('target-language', (event) => {
+        targetLanguage = event.payload;
+        statusEl.textContent = `🔄 Translating to ${targetLanguage}...`;
+        console.log('Target language:', targetLanguage);
       });
 
       // Initialize (no need to read clipboard anymore)
@@ -287,7 +295,7 @@
         translationTextEl.textContent = fullTranslation;
         
         // Update status
-        statusEl.textContent = '✅ Translation completed!';
+        statusEl.textContent = `✅ Translation to ${targetLanguage} completed!`;
         statusEl.className = 'status completed';
         
         // Enable copy button
