@@ -132,6 +132,22 @@ export class ShortcutManager {
         return;
       }
 
+      // For summarizer shortcut, open the summarizer window
+      if (shortcut === 'cmd+s') {
+        try {
+          console.log(`📝 Opening summarizer window for text (${clipboardText.length} chars)...`);
+          
+          // Open summarizer window (the window will handle the summarization)
+          await invoke('show_summarizer_window', {
+            text: clipboardText
+          });
+        } catch (error) {
+          console.error('Failed to open summarizer window:', error);
+          this.showNotification('Failed to open summarizer window', 'error');
+        }
+        return;
+      }
+
       // For other shortcuts, use the original agent system
       const result = await this.agentManager.executeAgent(shortcut, {
         input: clipboardText,

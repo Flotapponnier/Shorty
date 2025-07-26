@@ -1,0 +1,12 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "summarizer",
+  "description": "Capability for the summarizer window",
+  "windows": ["summarizer"],
+  "permissions": [
+    "core:default",
+    "clipboard-manager:allow-read-text",
+    "clipboard-manager:allow-write-text",
+    "core:window:allow-close"
+  ]
+}

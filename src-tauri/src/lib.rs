@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use tauri::Emitter;
+use tauri::{Emitter, Listener};
 use std::env;
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -31,6 +31,12 @@ pub struct TranscriptionResult {
     pub success: bool,
     pub transcription: Option<String>,
     pub error: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SummarizeRequest {
+    pub text: String,
+    pub api_key: String,
 }
 
 // Global audio recording state
@@ -504,6 +510,185 @@ fn convert_audio_to_wav(audio_data: &[f32], sample_rate: u32, channels: u16) -> 
     Ok(cursor.into_inner())
 }
 
+#[tauri::command]
+async fn summarize_text(text: String, api_key: String) -> Result<String, String> {
+    if text.trim().is_empty() {
+        return Err("No text provided to summarize".to_string());
+    }
+
+    // Read API key from environment if not provided
+    let api_key = if api_key == "dummy" {
+        env::var("OPENAI_API_KEY")
+            .map_err(|_| "OPENAI_API_KEY environment variable not found")?
+    } else {
+        api_key
+    };
+
+    let client = reqwest::Client::new();
+    
+    // Create a concise but comprehensive summary prompt
+    let system_prompt = "You are an expert text summarizer. Create a clear, concise summary that captures the key points and main ideas. Keep it informative but brief. Focus on the most important information.";
+    
+    let user_prompt = format!("Please summarize the following text:\n\n{}", text);
+    
+    let payload = serde_json::json!({
+        "model": "gpt-4o-mini",
+        "messages": [
+            {
+                "role": "system",
+                "content": system_prompt
+            },
+            {
+                "role": "user", 
+                "content": user_prompt
+            }
+        ],
+        "temperature": 0.3,
+        "max_tokens": 500
+    });
+
+    println!("📝 Summarizing text ({} chars) with OpenAI...", text.len());
+    let start_time = std::time::Instant::now();
+
+    let response = client
+        .post("https://api.openai.com/v1/chat/completions")
+        .header("Authorization", format!("Bearer {}", api_key))
+        .header("Content-Type", "application/json")
+        .json(&payload)
+        .send()
+        .await
+        .map_err(|e| format!("Request failed: {}", e))?;
+
+    let elapsed = start_time.elapsed();
+    
+    if response.status().is_success() {
+        println!("✅ Received summary from OpenAI (took {:.1}s)", elapsed.as_secs_f32());
+        let result: serde_json::Value = response.json().await
+            .map_err(|e| format!("Failed to parse response: {}", e))?;
+        
+        if let Some(summary) = result["choices"][0]["message"]["content"].as_str() {
+            let summary = summary.trim().to_string();
+            println!("🎉 SUMMARY SUCCESS: \"{}\"", summary);
+            println!("📋 Summary will be copied to clipboard!");
+            Ok(summary)
+        } else {
+            Err("No summary content in response".to_string())
+        }
+    } else {
+        let status = response.status();
+        let error_text = response.text().await.unwrap_or_default();
+        println!("❌ OpenAI API error {}: {}", status, error_text);
+        Err(format!("API error {}: {}", status, error_text))
+    }
+}
+
+#[tauri::command]
+async fn show_summarizer_window(app_handle: tauri::AppHandle, text: String) -> Result<(), String> {
+    let window = tauri::WebviewWindowBuilder::new(
+        &app_handle,
+        "summarizer",
+        tauri::WebviewUrl::App("summarizer.html".into())
+    )
+    .title("Text Summarizer")
+    .inner_size(700.0, 500.0)
+    .center()
+    .resizable(true)
+    .build()
+    .map_err(|e| e.to_string())?;
+    
+    // Wait for window to load, then send events with retries
+    tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
+    
+    println!("🪟 Sending clipboard text to summarizer window: {} chars", text.len());
+    
+    // Send the clipboard text multiple times to ensure it's received
+    for i in 0..3 {
+        match window.emit("clipboard-text", &text) {
+            Ok(_) => {
+                println!("✅ Successfully sent clipboard-text event (attempt {})", i + 1);
+                break;
+            },
+            Err(e) => {
+                println!("❌ Failed to send clipboard-text event (attempt {}): {}", i + 1, e);
+                if i < 2 {
+                    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+                }
+            }
+        }
+    }
+    
+    // Start the summarization
+    let _ = summarize_for_window(text, window).await;
+    
+    Ok(())
+}
+
+async fn summarize_for_window(text: String, window: tauri::WebviewWindow) -> Result<(), String> {
+    // Read API key from environment variable
+    let api_key = env::var("OPENAI_API_KEY")
+        .map_err(|_| "OPENAI_API_KEY environment variable not found. Please check your .env file.".to_string())?;
+
+    let client = reqwest::Client::new();
+    
+    // Create a concise but comprehensive summary prompt
+    let system_prompt = "You are an expert text summarizer. Create a clear, concise summary that captures the key points and main ideas. Keep it informative but brief. Focus on the most important information.";
+    
+    let user_prompt = format!("Please summarize the following text:\n\n{}", text);
+    
+    let payload = serde_json::json!({
+        "model": "gpt-4o-mini",
+        "messages": [
+            {
+                "role": "system",
+                "content": system_prompt
+            },
+            {
+                "role": "user", 
+                "content": user_prompt
+            }
+        ],
+        "temperature": 0.3,
+        "max_tokens": 500
+    });
+
+    println!("📝 Summarizing text ({} chars) with OpenAI for window...", text.len());
+    let start_time = std::time::Instant::now();
+
+    let response = client
+        .post("https://api.openai.com/v1/chat/completions")
+        .header("Authorization", format!("Bearer {}", api_key))
+        .header("Content-Type", "application/json")
+        .json(&payload)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let elapsed = start_time.elapsed();
+    
+    if response.status().is_success() {
+        println!("✅ Received summary from OpenAI (took {:.1}s)", elapsed.as_secs_f32());
+        let result: serde_json::Value = response.json().await
+            .map_err(|e| e.to_string())?;
+        
+        if let Some(summary) = result["choices"][0]["message"]["content"].as_str() {
+            let summary = summary.trim().to_string();
+            println!("🎉 SUMMARY SUCCESS for window: \"{}\"", summary);
+            
+            // Emit completion to the window
+            let _ = window.emit("summary-complete", &summary);
+        } else {
+            let _ = window.emit("summary-error", "No summary content in response");
+        }
+    } else {
+        let status = response.status();
+        let error_text = response.text().await.unwrap_or_default();
+        println!("❌ OpenAI API error {}: {}", status, error_text);
+        let _ = window.emit("summary-error", &format!("API error {}: {}", status, error_text));
+    }
+    
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // Load environment variables from .env file
@@ -527,7 +712,9 @@ pub fn run() {
             start_audio_recording,
             stop_audio_recording,
             transcribe_audio,
-            list_audio_devices
+            list_audio_devices,
+            summarize_text,
+            show_summarizer_window
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

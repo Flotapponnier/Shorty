@@ -6,6 +6,7 @@ import { TranslationService } from '../services/TranslationService.js';
 import { AudioRecordingService } from '../services/AudioRecordingService.js';
 import { TranslatorAgent } from '../agents/translator/TranslatorAgent.js';
 import { AudioRecorderAgent } from '../agents/audio-recorder/AudioRecorderAgent.js';
+import { ClipboardSummarizerAgent } from '../agents/clipboard-summarizer/ClipboardSummarizerAgent.js';
 
 export class App {
   private container: HTMLElement;
@@ -79,6 +80,11 @@ export class App {
         title: 'System Audio Recorder',
         description: 'Record computer audio (videos, music, meetings) and convert speech to text using AI. Press cmd+r to start recording, press again to stop and get transcription.',
         shortcut: 'cmd+r'
+      },
+      {
+        title: 'Clipboard Summarizer',
+        description: 'Summarize any text from your clipboard using AI. Copy text from articles, documents, or websites, then press cmd+s to get a concise summary.',
+        shortcut: 'cmd+s'
       }
     ];
 
@@ -109,8 +115,13 @@ export class App {
       const audioRecorderAgent = new AudioRecorderAgent(audioRecordingService);
       console.log(`🎤 Created audio recorder agent with shortcut: ${audioRecorderAgent.getShortcut()}`);
       
+      // Create and register clipboard summarizer agent
+      const summarizerAgent = new ClipboardSummarizerAgent('dummy');
+      console.log(`📝 Created summarizer agent with shortcut: ${summarizerAgent.getShortcut()}`);
+      
       this.agentManager.registerAgent(translatorAgent);
       this.agentManager.registerAgent(audioRecorderAgent);
+      this.agentManager.registerAgent(summarizerAgent);
       console.log('📋 Registered all agents in manager');
 
       // Register global shortcuts
