@@ -37,8 +37,14 @@
   transition: 0.75s;
 }
 
-.logo.tauri:hover {
-  filter: drop-shadow(0 0 2em #24c8db);
+.logo.shorty:hover {
+  filter: drop-shadow(0 0 2em #666666);
+}
+
+.description {
+  color: #666666;
+  font-size: 1.2em;
+  margin-top: 1em;
 }
 
 .row {
