@@ -3,7 +3,9 @@ import { MonitorPage } from './MonitorPage/MonitorPage.js';
 import { AgentManager } from '../services/AgentManager.js';
 import { ShortcutManager } from '../services/ShortcutManager.js';
 import { TranslationService } from '../services/TranslationService.js';
+import { AudioRecordingService } from '../services/AudioRecordingService.js';
 import { TranslatorAgent } from '../agents/translator/TranslatorAgent.js';
+import { AudioRecorderAgent } from '../agents/audio-recorder/AudioRecorderAgent.js';
 
 export class App {
   private container: HTMLElement;
@@ -72,6 +74,11 @@ export class App {
         title: 'Translate Clipboard/Text Selection',
         description: 'Translate clipboard or selected text to a preferred language using LLM translation agent.',
         shortcut: 'cmd+t'
+      },
+      {
+        title: 'System Audio Recorder',
+        description: 'Record computer audio (videos, music, meetings) and convert speech to text using AI. Press cmd+r to start recording, press again to stop and get transcription.',
+        shortcut: 'cmd+r'
       }
     ];
 
@@ -85,15 +92,26 @@ export class App {
     try {
       console.log('🚀 Initializing agents...');
       
+      // Debug: List available audio devices
+      await this.debugAudioDevices();
+      
       // Initialize translation service with dummy key (handled in backend)
       const translationService = new TranslationService('dummy-key', 'English');
+      
+      // Initialize audio recording service
+      const audioRecordingService = new AudioRecordingService();
       
       // Create and register translator agent
       const translatorAgent = new TranslatorAgent(translationService);
       console.log(`📝 Created translator agent with shortcut: ${translatorAgent.getShortcut()}`);
       
+      // Create and register audio recorder agent
+      const audioRecorderAgent = new AudioRecorderAgent(audioRecordingService);
+      console.log(`🎤 Created audio recorder agent with shortcut: ${audioRecorderAgent.getShortcut()}`);
+      
       this.agentManager.registerAgent(translatorAgent);
-      console.log('📋 Registered translator agent in manager');
+      this.agentManager.registerAgent(audioRecorderAgent);
+      console.log('📋 Registered all agents in manager');
 
       // Register global shortcuts
       console.log('⌨️ Registering global shortcuts...');
@@ -124,6 +142,16 @@ export class App {
     this.currentView = view;
   }
 
+  private async debugAudioDevices(): Promise<void> {
+    try {
+      const audioService = new AudioRecordingService();
+      const devices = await audioService.listAudioDevices();
+      console.log('🎧 Available Audio Devices:');
+      devices.forEach(device => console.log(`  - ${device}`));
+    } catch (error) {
+      console.error('❌ Failed to list audio devices:', error);
+    }
+  }
 
   public addFeature(featureData: FeatureSectionData): void {
     const featureSection = new FeatureSection(featureData, this.featuresContainer);

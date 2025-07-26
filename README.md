@@ -1,208 +1,252 @@
-# Shorty - AI-Powered Shortcut Agent
+# Shorty - AI-Powered Desktop Productivity App
 
-A cross-platform desktop application built with Tauri and TypeScript that provides instant AI-powered text processing through global shortcuts.
+## 🎯 Project Overview
 
-## 🎯 What This App Does
+Shorty is a cross-platform desktop application built with **Tauri 2.0** and **TypeScript** that provides AI-powered productivity shortcuts. The app captures system audio and clipboard content, then uses **OpenAI APIs** (GPT-4 + Whisper) to provide intelligent analysis and automation.
 
-**Global shortcuts → AI processing → Instant results**
+## 🚀 Current Features
 
-1. **Press a global shortcut** → triggers agent execution
-2. **Processes clipboard content** → automatically uses copied text
-3. **AI analyzes and transforms** → using Groq's free LLM API
-4. **Results copied back** → instant access to processed content
+### 1. **Translation Agent** (`cmd+t`)
+- Translates clipboard text to selected language using OpenAI GPT-4o-mini
+- Streaming translation in popup window
+- Supports multiple languages with inline selector
+- Real-time translation with typing indicators
 
-Perfect for instant translation, text analysis, or any workflow where you need AI to quickly process text content.
+### 2. **System Audio Recorder** (`cmd+r`) 
+- Records **computer audio** (videos, meetings, music) - NOT microphone
+- Converts speech to text using OpenAI Whisper API
+- Automatically copies transcription to clipboard
+- Toggle recording: press once to start, again to stop
 
 ## 🏗️ Architecture
 
-- **Frontend**: TypeScript + Modern Web UI
-- **Backend**: Rust (Tauri 2.0)
-- **Platforms**: Windows, macOS, Linux
-- **AI Integration**: Groq API (Free LLaMA models)
+### **Frontend (TypeScript)**
+- **Framework**: Vanilla TypeScript with Vite
+- **Entry Point**: `src/main.ts`
+- **Components**: Modular component system in `src/components/`
+- **Services**: Business logic in `src/services/`
+- **Agents**: AI agents in `src/agents/` following BaseAgent pattern
 
-## ✨ Current Features
+### **Backend (Rust)**
+- **Framework**: Tauri 2.0
+- **Main Files**: 
+  - `src-tauri/src/main.rs` - App initialization
+  - `src-tauri/src/lib.rs` - Command implementations
+- **Audio**: `cpal` crate for system audio capture
+- **HTTP**: `reqwest` with multipart support for OpenAI APIs
 
-### ✅ Translation Agent
-- **Shortcut**: `Cmd+T` (macOS) / `Ctrl+T` (Windows/Linux)
-- **Function**: Translates clipboard content to English (configurable)
-- **Usage**: Copy text → Press shortcut → Get translation in clipboard
-
-### 🔄 Coming Soon
-- **LLM Agent**: `Cmd+K` - Screenshot analysis with custom prompts
-- **Email Agent**: Text rewriting and professional formatting
-- **Research Agent**: Content analysis and insights
-
-## 🏗️ Agent Architecture
-
+### **Agent Architecture**
 ```
-src/
-├── agents/                    # Isolated agent modules
-│   ├── base/                 # Base agent interface
-│   ├── translator/           # Translation agent
-│   └── llm/                  # LLM analysis agent
-├── services/                 # Core services
-│   ├── AgentManager.ts       # Agent lifecycle management
-│   ├── ShortcutManager.ts    # Global shortcut handling
-│   └── TranslationService.ts # Groq API integration
-├── components/               # UI components
-│   ├── FeatureSection/       # Feature display cards
-│   ├── MonitorPage/          # Execution monitoring
-│   └── App.ts               # Main application
-└── types/                   # TypeScript interfaces
-    └── Agent.ts             # Agent base types
+BaseAgent (abstract class)
+├── TranslatorAgent (cmd+t)
+└── AudioRecorderAgent (cmd+r)
 ```
 
-## 🛠️ Tech Stack
+Each agent follows the pattern:
+- `AgentConfig` - name, description, shortcut, enabled status
+- `execute(context)` - main execution logic
+- Monitored executions tracked in `AgentManager`
 
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| Frontend | TypeScript | Type-safe UI development |
-| Backend | Rust | System integration & security |
-| Framework | Tauri 2.0 | Cross-platform desktop |
-| Global Shortcuts | tauri-plugin-global-shortcut | System-wide hotkeys |
-| Clipboard | tauri-plugin-clipboard-manager | Clipboard access |
-| AI | Groq API | Free LLaMA 3 models |
-| HTTP Client | reqwest | API communication |
+## 🔧 Development Setup
 
-## 🚀 Quick Start
-
-### 1. Clone and Install
-
+### **Prerequisites**
 ```bash
-# Clone the repository
-git clone <repository-url>
-cd Shorty
+# Install Rust
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
-# Install dependencies
+# Install Bun (package manager)
+curl -fsSL https://bun.sh/install | bash
+
+# Install Tauri CLI
+cargo install tauri-cli --version "^2.0.0"
+```
+
+### **Installation**
+```bash
+# Clone and install dependencies
+git clone <repo>
+cd Shorty
 bun install
 
-# Run in development mode
-bun run tauri dev
+# Set up environment variables
+cp .env.example .env
+# Edit .env and add your OpenAI API key:
+# OPENAI_API_KEY=sk-your-key-here
 ```
 
-### 2. Get OpenAI API Key
-
-1. Visit [OpenAI Platform](https://platform.openai.com/api-keys)
-2. Sign up for an account
-3. Go to API Keys section
-4. Create a new API key
-5. Copy the key (starts with `sk-proj-...`)
-
-### 3. Configure API Key
-
-1. Copy the environment file: `cp .env.example .env`
-2. Edit `.env` and replace with your actual API key:
-   ```bash
-   OPENAI_API_KEY=sk-proj-your-actual-api-key-here
-   ```
-3. The API key will be loaded automatically on startup
-
-### 4. Test Translation
-
-1. Copy any text to your clipboard
-2. Press `Cmd+T` (macOS) or `Ctrl+T` (Windows/Linux)
-3. Wait for the notification
-4. Paste to see the translated text
-
-## 📋 Prerequisites
-
-- **Bun** (latest stable) - [Install Bun](https://bun.sh/)
-- **Rust** (latest stable) - [Install Rust](https://rustup.rs/)
-- **System permissions** for:
-  - Global shortcuts (required for hotkeys)
-  - Clipboard access (required for text processing)
-
-## 🔑 Configuration Options
-
-### API Settings
-- **API Key**: Loaded from `.env` file for security
-- **Target Language**: Configurable (default: German)
-- **Model**: Uses OpenAI's GPT-4o-mini model
-
-### Shortcut Customization
-Currently using fixed shortcuts:
-- `Cmd+T` / `Ctrl+T`: Translation agent
-
-Future versions will support custom shortcut configuration.
-
-## 🎯 Use Cases
-
-### Current Features
-- **Language Learning**: Copy foreign text → Instant translation
-- **International Communication**: Translate messages before sending
-- **Document Translation**: Quick translation of text snippets
-- **Content Creation**: Translate content for multilingual audiences
-
-### Future Capabilities
-- **Email Enhancement**: Copy drafts → Get professional rewrites
-- **Code Analysis**: Copy code → Get explanations and improvements
-- **Research Assistance**: Copy articles → Get summaries and insights
-
-## 🖥️ UI Features
-
-### Main Interface
-- **Feature Cards**: Clean display of available agents
-- **Navigation**: Switch between Features and Monitor views
-- **API Configuration**: Secure key input and storage
-
-### Monitoring Dashboard
-- **Execution Logs**: Real-time tracking of agent runs
-- **Success Metrics**: Visual statistics and performance data
-- **Error Handling**: Detailed error messages and debugging info
-
-## 🔒 Privacy & Security
-
-- **Local Storage**: API keys stored in browser localStorage
-- **No Telemetry**: Zero data collection or tracking
-- **Open Source**: Full transparency in code and functionality
-- **Clipboard Only**: Only processes clipboard content when triggered
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-1. **Shortcut not working**
-   - Ensure the app has accessibility permissions (macOS)
-   - Check if another app is using the same shortcut
-   - Restart the app after permission changes
-
-2. **Translation failing**
-   - Verify API key is valid and has credits
-   - Check internet connection
-   - Ensure clipboard has text content
-
-3. **Build errors**
-   ```bash
-   # Clean and rebuild
-   rm -rf target/ dist/
-   bun install
-   bun run tauri build
-   ```
-
-### Debug Mode
-Run with console logging:
+### **Development Commands**
 ```bash
-RUST_LOG=debug bun run tauri dev
+# Start development server (hot reload)
+bun run tauri dev
+
+# Build for production
+bun run tauri build
+
+# Frontend only (Vite dev server)
+bun run dev
+
+# Type checking
+bun run build
+
+# Rust tests
+cd src-tauri && cargo test
 ```
 
-## 🤝 Contributing
+## 🎧 System Audio Setup (Required for Audio Recording)
 
-### Agent Development
-1. Create new agent in `src/agents/your-agent/`
-2. Extend `BaseAgent` class
-3. Register in `AgentManager`
-4. Add to UI feature list
+### **macOS Setup**
+1. **Install BlackHole**:
+   ```bash
+   # Download from: https://github.com/ExistentialAudio/BlackHole/releases
+   # Install BlackHole.2ch.pkg
+   # Restart Mac
+   ```
 
-### Architecture Guidelines
-- Keep agents isolated and modular
-- Use TypeScript interfaces for type safety
-- Follow existing naming conventions
-- Add comprehensive error handling
+2. **Create Multi-Output Device**:
+   - Open **Audio MIDI Setup**
+   - Create Multi-Output Device with:
+     - ✅ MacBook Pro Speakers  
+     - ✅ BlackHole 2ch
+   - Set as system output in **System Preferences → Sound**
 
-## 📄 License
+3. **Verify Setup**: App console should show:
+   ```
+   🎧 Available Audio Devices:
+   - Input: BlackHole 2ch  ← Required for system audio
+   ```
 
-MIT License - feel free to use this in your own projects!
+### **Windows Setup**
+- Install **VB-Audio Virtual Cable** or enable **Stereo Mix**
+
+### **Linux Setup**  
+- Use PulseAudio monitor devices (usually available by default)
+
+## 🔑 Environment Variables
+
+Create `.env` file in project root:
+```bash
+# Required for AI features
+OPENAI_API_KEY=sk-your-openai-api-key-here
+```
+
+## 📱 Usage
+
+### **Translation**
+1. Copy text to clipboard
+2. Press `cmd+t`
+3. Translation popup appears with streaming translation
+4. Select target language from dropdown in feature card
+
+### **System Audio Recording**
+1. Play video/audio on your computer
+2. Press `cmd+r` → "🎤 Recording started"
+3. Let it record speech/audio
+4. Press `cmd+r` again → Transcription copied to clipboard
+
+### **Monitoring**
+- Switch to "Monitor" tab to see all agent executions
+- Real-time status tracking and execution history
+
+## 🗂️ Project Structure
+
+```
+Shorty/
+├── src/                          # Frontend TypeScript
+│   ├── components/               # UI components
+│   │   ├── App.ts               # Main app component
+│   │   ├── FeatureSection/      # Feature cards
+│   │   └── MonitorPage/         # Execution monitoring
+│   ├── services/                # Business logic
+│   │   ├── AgentManager.ts      # Agent registry & execution
+│   │   ├── ShortcutManager.ts   # Global shortcuts
+│   │   ├── TranslationService.ts
+│   │   └── AudioRecordingService.ts
+│   ├── agents/                  # AI agent implementations
+│   │   ├── translator/
+│   │   └── audio-recorder/
+│   ├── types/                   # TypeScript types
+│   └── main.ts                  # Entry point
+├── src-tauri/                   # Rust backend
+│   ├── src/
+│   │   ├── main.rs             # Tauri app setup
+│   │   └── lib.rs              # Commands (audio, translation)
+│   ├── Cargo.toml              # Rust dependencies
+│   └── tauri.conf.json         # Tauri configuration
+├── translation.html            # Translation popup window
+├── .env                        # Environment variables
+└── README.md                   # This file
+```
+
+## 🔧 Troubleshooting
+
+### **Audio Recording Issues**
+```bash
+# Check available audio devices in browser console:
+🎧 Available Audio Devices:
+- Input: BlackHole 2ch  ← Must be present for system audio
+
+# If BlackHole missing:
+1. Install BlackHole and restart Mac
+2. Verify in System Preferences → Sound
+3. Create Multi-Output Device in Audio MIDI Setup
+```
+
+### **Clipboard Issues**
+- Uses Tauri's clipboard plugin with fallback to browser API
+- Check permissions in System Preferences → Security & Privacy
+
+### **OpenAI API Issues**
+```bash
+# Check API key in backend logs:
+✅ OpenAI API key loaded from environment
+❌ OpenAI API key not found. Please check your .env file.
+```
+
+## 🎯 Current Development Status
+
+### ✅ **Completed Features**
+- [x] Translation agent with streaming responses
+- [x] System audio recording with speech-to-text
+- [x] Global shortcuts (cmd+t, cmd+r)
+- [x] Agent monitoring and execution tracking
+- [x] Environment variable management
+- [x] Cross-platform clipboard support
+
+### 🔄 **Future Enhancements**
+- [ ] Screenshot capture agent (cmd+s)
+- [ ] Email composition agent
+- [ ] Research agent with web search
+- [ ] Plugin architecture for custom agents
+- [ ] Settings panel for API keys and preferences
+
+## 🤖 AI Assistant Context
+
+**When working on this project, remember:**
+
+1. **Agent Pattern**: All new features should follow the BaseAgent pattern
+2. **Tauri Commands**: Backend functions use `#[tauri::command]` and are registered in `main.rs`
+3. **Environment Variables**: API keys stored in `.env` and loaded via `dotenvy`
+4. **Audio**: System audio capture requires virtual audio drivers (BlackHole on macOS)
+5. **Clipboard**: Use Tauri's clipboard plugin, not browser APIs
+6. **Monitoring**: All agent executions are automatically tracked by AgentManager
+7. **Error Handling**: Comprehensive error handling with user notifications
+
+**Key Files to Modify for New Features:**
+- `src/agents/` - Create new agent classes
+- `src/components/App.ts` - Register agents and add feature cards
+- `src-tauri/src/lib.rs` - Add new Tauri commands if needed
+- `src/services/ShortcutManager.ts` - Handle new shortcuts
+
+**Testing Checklist:**
+- [ ] Rust compilation: `cargo build`
+- [ ] TypeScript compilation: `bun run build`
+- [ ] Audio devices detection in console
+- [ ] Global shortcuts registration
+- [ ] OpenAI API key loading
+- [ ] Agent execution monitoring
 
 ---
 
-**Built with ❤️ using Tauri, Rust, and TypeScript**
+**Last Updated**: July 26, 2025
+**Current Version**: 0.1.0
+**Platform**: macOS (primary), Windows/Linux (planned)

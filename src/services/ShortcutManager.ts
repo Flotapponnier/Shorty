@@ -6,6 +6,8 @@ import { invoke } from '@tauri-apps/api/core';
 export class ShortcutManager {
   private agentManager: AgentManager;
   private registeredShortcuts: Set<string> = new Set();
+  private lastShortcutTime: Map<string, number> = new Map();
+  private readonly DEBOUNCE_MS = 1000; // Prevent rapid shortcuts within 1 second
 
   constructor(agentManager: AgentManager) {
     this.agentManager = agentManager;
@@ -60,7 +62,48 @@ export class ShortcutManager {
 
   private async handleShortcut(shortcut: string): Promise<void> {
     try {
-      // Get clipboard content
+      // Debounce rapid shortcut presses
+      const now = Date.now();
+      const lastTime = this.lastShortcutTime.get(shortcut) || 0;
+      
+      if (now - lastTime < this.DEBOUNCE_MS) {
+        console.log(`⏸️ Shortcut ${shortcut} debounced (too rapid)`);
+        return;
+      }
+      
+      this.lastShortcutTime.set(shortcut, now);
+      
+      // For audio recording shortcut, handle separately (no clipboard needed)
+      if (shortcut === 'cmd+r') {
+        try {
+          // Execute the audio recorder agent
+          const result = await this.agentManager.executeAgent(shortcut, {
+            input: 'audio_recording_toggle',
+            metadata: { source: 'audio_shortcut' }
+          });
+
+          if (result.success && result.output) {
+            // Copy transcription to clipboard if it's actual text
+            if (result.output !== 'Recording started...') {
+              console.log('📋 Copying transcription to clipboard:', result.output);
+              await this.copyToClipboard(result.output);
+              console.log('✅ Transcription successfully copied to clipboard!');
+              this.showNotification('🎤 Recording stopped. Transcription copied to clipboard!', 'success');
+            } else {
+              this.showNotification('🎤 Recording started. Press cmd+r again to stop.', 'info');
+            }
+          } else {
+            console.error('Audio recording failed:', result.error);
+            this.showNotification(`Error: ${result.error}`, 'error');
+          }
+        } catch (error) {
+          console.error('Failed to handle audio recording:', error);
+          this.showNotification('Failed to handle audio recording', 'error');
+        }
+        return;
+      }
+
+      // For other shortcuts, get clipboard content
       const clipboardText = await readText();
       
       if (!clipboardText || clipboardText.trim().length === 0) {
@@ -112,9 +155,19 @@ export class ShortcutManager {
 
   private async copyToClipboard(text: string): Promise<void> {
     try {
-      await navigator.clipboard.writeText(text);
+      // Use Tauri's clipboard plugin instead of navigator.clipboard
+      const { writeText } = await import('@tauri-apps/plugin-clipboard-manager');
+      await writeText(text);
+      console.log('✅ Text copied to clipboard successfully');
     } catch (error) {
       console.error('Failed to copy to clipboard:', error);
+      // Fallback to navigator.clipboard if Tauri plugin fails
+      try {
+        await navigator.clipboard.writeText(text);
+        console.log('✅ Text copied to clipboard via fallback');
+      } catch (fallbackError) {
+        console.error('Both clipboard methods failed:', fallbackError);
+      }
     }
   }
 
